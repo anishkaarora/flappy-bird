@@ -1,22 +1,146 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flappy Bird Game</title>
-    <link rel="stylesheet" href="style.css">
-</head>
+<html>
 <body>
-    <!-- Game container -->
-    <div id="game-container">
-        <div id="game">
-            <div id="bird"></div>
-            <div id="score">Score: 0</div>
-        </div>
-    </div>
+<!-- Create a canvas element where the game will be drawn -->
+<canvas id="gameCanvas" width="600" height="600"></canvas>
+<script>
+// Get a reference to the canvas and its context
+let canvas = document.getElementById('gameCanvas');
+let ctx = canvas.getContext('2d');
+
+// Initialize the score to 0
+let score = 0;
+
+// Load the bird image and set its initial position and velocity
+let bird = new Image();
+bird.src = 'bird.png';
+let birdX = canvas.width / 4;
+let birdY = canvas.height / 2;
+let birdVelocity = 0;
+let gravity = 0.4;
+let jumpSound = new Audio('jump.wav');
+let scoreSound = new Audio('point.wav');
+let dieSound = new Audio('die.wav');
 
 
+// Load the pipe images and initialize the pipes array
+let pipeNorth = new Image();
+pipeNorth.src = 'pipe.png';
+let pipeSouth = new Image();
+pipeSouth.src = 'pipe.png';
+let pipes = [];
+let pipeWidth = 100;
+let pipeGap = 350;
+let pipeSpawnInterval = 1500;
+let lastPipeTime = 0;
+let restartButton = document.createElement('button');
+restartButton.textContent = 'Restart';
+restartButton.style.display = 'none';
+document.body.appendChild(restartButton);
 
-    <script src="script.js"></script>
+// Load the background image
+let bg = new Image();
+bg.src = 'background.png';
+
+// The game loop, which updates the game state and redraws the game
+function gameLoop(timestamp) {
+  // Clear the canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw the background
+  ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+
+  // Update the bird's velocity and position
+  birdVelocity += gravity;
+  birdY += birdVelocity;
+
+  // Spawn new pipes at regular intervals
+  if (timestamp - lastPipeTime > pipeSpawnInterval) {
+    let adjustedPipeGap = pipeGap - score * 2;
+    adjustedPipeGap = Math.max(adjustedPipeGap, 50);  // Ensure the gap doesn't become too small
+
+
+    let pipeHeight = Math.random() * (canvas.height - adjustedPipeGap);
+  pipes.push({x: canvas.width, y: pipeHeight, width: pipeWidth, height: pipeHeight});
+  pipes.push({x: canvas.width, y: pipeHeight + pipeGap, width: pipeWidth, height: canvas.height - pipeHeight - pipeGap});
+  lastPipeTime = timestamp;
+}
+
+  // Update the pipes' positions and draw them
+  for (let i = 0; i < pipes.length; i++) {
+  let pipe = pipes[i];
+  pipe.x -= 2 + score * 0.001;
+
+  if (pipe.x + pipe.width < 0) {
+    pipes.splice(i, 1);
+    i--;
+  }
+
+    // Draw the pipes
+    if (pipe.y + pipe.height == canvas.height) {
+      ctx.drawImage(pipeNorth, pipe.x, pipe.y, pipe.width, pipe.height);
+    } else {
+      ctx.drawImage(pipeSouth, pipe.x, pipe.y, pipe.width, pipe.height);
+    }
+
+    // Check for collisions between the bird and the pipes
+    if (birdX + bird.width > pipe.x && birdX < pipe.x + pipe.width &&
+        birdY + bird.height > pipe.y && birdY < pipe.y + pipe.height) {
+      dieSound.play();
+      return;  // Game over
+
+    }
+
+    // Increment the score if the bird has passed a pipe
+    if (birdX > pipe.x + pipe.width && pipe.y + pipe.height == canvas.height) {
+      score++;
+      scoreSound.play();
+
+    }
+
+    // Update the bird's velocity and position
+
+
+    // Check if the bird has hit the top or bottom of the canvas
+    if (birdY < 0) {
+      birdY = 0;
+      birdVelocity = 0;
+    } else if (birdY + bird.height > canvas.height) {
+      birdY = canvas.height - bird.height;
+      birdVelocity = 0;
+    }
+
+
+  }
+
+  // Draw the bird
+  ctx.drawImage(bird, birdX, birdY, bird.width, bird.height);
+
+  // Draw the score
+  ctx.fillStyle = 'black';
+  ctx.font = '20px Arial';
+  ctx.fillText('Score: ' + score, 10, 30);
+
+  // Check for collisions between the bird and the ground
+  if (birdY + bird.height > canvas.height) {
+    dieSound.play();
+    return;  // Game over
+  }
+
+  // Request the next frame of the game loop
+  requestAnimationFrame(gameLoop);
+}
+
+// Make the bird jump when the space bar is pressed
+document.addEventListener('keydown', function(e) {
+  if (e.code === 'Space') {
+    birdVelocity = -10;
+    jumpSound.play();
+  }
+});
+
+// Start the game loop
+gameLoop();
+</script>
 </body>
 </html>
